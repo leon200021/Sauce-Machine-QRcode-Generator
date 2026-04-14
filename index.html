@@ -46,7 +46,7 @@
             <div class="inline-flex p-4 bg-amber-500 text-gray-900 rounded-3xl shadow-2xl mb-4 gold-glow">
                 <i data-lucide="droplets" class="w-10 h-10"></i>
             </div>
-            <h1 class="text-3xl font-bold tracking-tight mb-2 italic">Sauce Machine Pro</h1>
+            <h1 class="text-3xl font-bold tracking-tight mb-2 italic">Sauce Machine Generator</h1>
             <p class="text-amber-500/60 text-sm font-medium tracking-widest uppercase">QR Command Generator (Q1 v1.0)</p>
         </div>
 
@@ -70,9 +70,9 @@
                         目標 ID (DST)
                     </label>
                     <div class="flex items-center gap-4">
-                        <input type="text" id="dstId" value="01" maxlength="2" 
+                        <input type="text" id="dstId" value="01" 
                                class="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl focus:border-blue-500 outline-none text-2xl font-bold mono text-center"
-                               oninput="this.value = this.value.toUpperCase().replace(/[^0-9A-F]/g, ''); updateAll();">
+                               oninput="this.value = this.value.toUpperCase().replace(/[^0-9A-Z_]/g, ''); updateAll();">
                     </div>
                     <p class="text-[10px] text-white/30 mt-2">註: 切換身分建議設為 00 (廣播)</p>
                 </div>
@@ -86,7 +86,7 @@
                     <div class="relative">
                         <input type="text" id="dataVal" value="25.0"
                                class="w-full pl-6 pr-14 py-4 bg-white/5 border border-white/10 rounded-2xl focus:border-blue-500 outline-none text-2xl font-bold mono"
-                               oninput="updateAll()">
+                               oninput="if (currentMode === 'INGREDIENTS') this.value = this.value.toUpperCase().replace(/[^0-9A-Z_]/g, ''); updateAll();">
                         <span id="unitLabel" class="absolute right-6 top-1/2 -translate-y-1/2 text-white/30 font-bold">g</span>
                     </div>
                 </div>
@@ -98,7 +98,7 @@
                 <div id="rawString" class="text-blue-400 font-bold mono break-all text-lg mb-2"></div>
                 <div class="flex items-center gap-2 text-xs text-white/40 font-medium">
                     <span class="px-2 py-0.5 bg-white/5 rounded border border-white/10">CRC: <span id="crcVal" class="text-green-400">--</span></span>
-                    <span class="px-2 py-0.5 bg-white/5 rounded border border-white/10">CMD: WEIGHT</span>
+                    <span class="px-2 py-0.5 bg-white/5 rounded border border-white/10">CMD: <span id="cmdVal">WEIGHT</span></span>
                 </div>
                 <button onclick="copyToClipboard()" class="absolute top-6 right-6 p-3 bg-white/5 text-white/40 rounded-xl hover:text-white hover:bg-white/10 transition-all">
                     <i data-lucide="copy" class="w-5 h-5"></i>
@@ -110,15 +110,10 @@
         <div id="resultArea" class="glass-card rounded-[2.5rem] p-10 text-center animate-in zoom-in duration-500">
             <div id="qrcode" class="flex justify-center mb-8"></div>
             
-            <div class="flex gap-4">
-                <button onclick="downloadQR()" class="flex-1 flex items-center justify-center gap-3 py-4 px-6 bg-white/10 hover:bg-white/20 text-white rounded-2xl font-bold transition-all active:scale-95">
-                    <i data-lucide="download" class="w-5 h-5"></i>
-                    Save Image
-                </button>
-                <button onclick="updateAll()" class="w-16 flex items-center justify-center bg-amber-500 text-gray-900 rounded-2xl font-bold hover:bg-amber-400 transition-all active:rotate-180 duration-500">
-                    <i data-lucide="refresh-cw" class="w-6 h-6"></i>
-                </button>
-            </div>
+            <button onclick="downloadQR()" class="w-full flex items-center justify-center gap-3 py-4 px-6 bg-white/10 hover:bg-white/20 text-white rounded-2xl font-bold transition-all active:scale-95">
+                <i data-lucide="download" class="w-5 h-5"></i>
+                Save Image
+            </button>
         </div>
     </div>
 
@@ -161,6 +156,7 @@
                 dstId.value = "00"; // 切換身分建議廣播
             }
             
+            document.getElementById('cmdVal').innerText = mode;
             lucide.createIcons();
             updateAll();
         }
@@ -175,7 +171,7 @@
         }
 
         function updateAll() {
-            const dst = document.getElementById('dstId').value.padStart(2, '0') || '01';
+            const dst = document.getElementById('dstId').value || '01';
             let dataRaw = document.getElementById('dataVal').value;
             let dataStr = dataRaw;
 
@@ -215,7 +211,9 @@
             const img = document.querySelector('#qrcode img');
             if (img) {
                 const link = document.createElement('a');
-                link.download = `SAUCE_${document.getElementById('weightVal').value}g_DST${document.getElementById('dstId').value}.png`;
+                const dst = document.getElementById('dstId').value || '01';
+                const data = document.getElementById('dataVal').value || '0';
+                link.download = `SAUCE_${currentMode}_${data}_ID${dst}.png`;
                 link.href = img.src;
                 link.click();
             }
