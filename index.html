@@ -50,6 +50,16 @@
             <p class="text-amber-500/60 text-sm font-medium tracking-widest uppercase">QR Command Generator (Q1 v1.0)</p>
         </div>
 
+        <!-- Mode Switcher -->
+        <div class="flex gap-2 mb-6 p-1 bg-white/5 rounded-2xl border border-white/10">
+            <button onclick="setMode('WEIGHT')" id="mode-WEIGHT" class="flex-1 py-3 rounded-xl font-bold transition-all bg-amber-500 text-gray-900">
+                WEIGHT (出料)
+            </button>
+            <button onclick="setMode('INGREDIENTS')" id="mode-INGREDIENTS" class="flex-1 py-3 rounded-xl font-bold transition-all text-white/40 hover:text-white">
+                IDENTITY (換料/ID)
+            </button>
+        </div>
+
         <!-- Controls -->
         <div class="glass-card rounded-[2.5rem] p-8 mb-8">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -57,26 +67,27 @@
                 <div>
                     <label class="block text-xs font-bold text-amber-500 tracking-widest uppercase mb-3 flex items-center gap-2">
                         <i data-lucide="cpu" class="w-4 h-4"></i>
-                        設備 ID (DST)
+                        目標 ID (DST)
                     </label>
                     <div class="flex items-center gap-4">
                         <input type="text" id="dstId" value="01" maxlength="2" 
                                class="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-2xl focus:border-blue-500 outline-none text-2xl font-bold mono text-center"
                                oninput="this.value = this.value.toUpperCase().replace(/[^0-9A-F]/g, ''); updateAll();">
                     </div>
+                    <p class="text-[10px] text-white/30 mt-2">註: 切換身分建議設為 00 (廣播)</p>
                 </div>
 
-                <!-- Weight Amount -->
+                <!-- Weight Amount / Ingredient Name -->
                 <div>
-                    <label class="block text-xs font-bold text-amber-500 tracking-widest uppercase mb-3 flex items-center gap-2">
+                    <label id="dataLabel" class="block text-xs font-bold text-amber-500 tracking-widest uppercase mb-3 flex items-center gap-2">
                         <i data-lucide="scale" class="w-4 h-4"></i>
-                        出料重量 (WEIGHT)
+                        出料重量 (g)
                     </label>
                     <div class="relative">
-                        <input type="number" id="weightVal" value="25.0" step="0.5" min="0" 
+                        <input type="text" id="dataVal" value="25.0"
                                class="w-full pl-6 pr-14 py-4 bg-white/5 border border-white/10 rounded-2xl focus:border-blue-500 outline-none text-2xl font-bold mono"
                                oninput="updateAll()">
-                        <span class="absolute right-6 top-1/2 -translate-y-1/2 text-white/30 font-bold">g</span>
+                        <span id="unitLabel" class="absolute right-6 top-1/2 -translate-y-1/2 text-white/30 font-bold">g</span>
                     </div>
                 </div>
             </div>
@@ -116,11 +127,43 @@
 
     <script>
         let qrcode = null;
+        let currentMode = 'WEIGHT';
 
         window.onload = () => {
             lucide.createIcons();
             updateAll();
         };
+
+        function setMode(mode) {
+            currentMode = mode;
+            
+            // UI Toggle
+            const btnWeight = document.getElementById('mode-WEIGHT');
+            const btnIng = document.getElementById('mode-INGREDIENTS');
+            const dataLabel = document.getElementById('dataLabel');
+            const unitLabel = document.getElementById('unitLabel');
+            const dstId = document.getElementById('dstId');
+
+            if (mode === 'WEIGHT') {
+                btnWeight.className = "flex-1 py-3 rounded-xl font-bold transition-all bg-amber-500 text-gray-900";
+                btnIng.className = "flex-1 py-3 rounded-xl font-bold transition-all text-white/40 hover:text-white";
+                dataLabel.innerHTML = '<i data-lucide="scale" class="w-4 h-4"></i> 出料重量 (g)';
+                unitLabel.innerText = 'g';
+                document.getElementById('dataVal').type = 'number';
+                document.getElementById('dataVal').value = "25.0";
+            } else {
+                btnIng.className = "flex-1 py-3 rounded-xl font-bold transition-all bg-amber-500 text-gray-900";
+                btnWeight.className = "flex-1 py-3 rounded-xl font-bold transition-all text-white/40 hover:text-white";
+                dataLabel.innerHTML = '<i data-lucide="package" class="w-4 h-4"></i> 換料名稱 / ID';
+                unitLabel.innerText = 'ID';
+                document.getElementById('dataVal').type = 'text';
+                document.getElementById('dataVal').value = "01";
+                dstId.value = "00"; // 切換身分建議廣播
+            }
+            
+            lucide.createIcons();
+            updateAll();
+        }
 
         function calculateCRC(input) {
             let sum = 0;
@@ -133,11 +176,16 @@
 
         function updateAll() {
             const dst = document.getElementById('dstId').value.padStart(2, '0') || '01';
-            const weight = parseFloat(document.getElementById('weightVal').value) || 0;
-            // 格式化：若為整數則不留小數點，否則留一位
-            const weightStr = weight % 1 === 0 ? weight : weight.toFixed(1).replace(/\.0$/, '');
+            let dataRaw = document.getElementById('dataVal').value;
+            let dataStr = dataRaw;
 
-            const preString = `Q1|${dst}|WEIGHT|${weightStr}`;
+            if (currentMode === 'WEIGHT') {
+                const weight = parseFloat(dataRaw) || 0;
+                // 格式化：若為整數則不留小數點，否則留一位
+                dataStr = weight % 1 === 0 ? weight : weight.toFixed(1).replace(/\.0$/, '');
+            }
+
+            const preString = `Q1|${dst}|${currentMode}|${dataStr}`;
             const crc = calculateCRC(preString);
             const finalString = `${preString}|${crc}`;
 
