@@ -23,11 +23,14 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        #qrcode img {
+        #qrcode img, #qrcode canvas {
+            max-width: 100%;
+            height: auto !important;
             margin: 0 auto;
-            border: 16px solid white;
-            border-radius: 20px;
+            border: 12px solid white;
+            border-radius: 16px;
             box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            box-sizing: border-box;
         }
 
         .gold-glow {
@@ -46,22 +49,21 @@
             <div class="inline-flex p-4 bg-amber-500 text-gray-900 rounded-3xl shadow-2xl mb-4 gold-glow">
                 <i data-lucide="droplets" class="w-10 h-10"></i>
             </div>
-            <h1 class="text-3xl font-bold tracking-tight mb-2 italic">Sauce Machine Generator</h1>
+            <h1 class="text-3xl font-bold tracking-tight mb-2 italic">Sauce Machine Pro</h1>
             <p class="text-amber-500/60 text-sm font-medium tracking-widest uppercase">QR Command Generator (Q1 v1.0)</p>
         </div>
 
         <!-- Mode Switcher -->
         <div class="flex gap-2 mb-6 p-1 bg-white/5 rounded-2xl border border-white/10">
-            <button onclick="setMode('WEIGHT')" id="mode-WEIGHT" class="flex-1 py-3 rounded-xl font-bold transition-all bg-amber-500 text-gray-900">
+            <button onclick="setMode('WEIGHT')" id="mode-WEIGHT" class="flex-1 py-3 rounded-xl font-bold transition-all bg-amber-500 text-gray-900 text-sm sm:text-base">
                 WEIGHT (出料)
             </button>
-            <button onclick="setMode('INGREDIENTS')" id="mode-INGREDIENTS" class="flex-1 py-3 rounded-xl font-bold transition-all text-white/40 hover:text-white">
+            <button onclick="setMode('INGREDIENTS')" id="mode-INGREDIENTS" class="flex-1 py-3 rounded-xl font-bold transition-all text-white/40 hover:text-white text-sm sm:text-base">
                 IDENTITY (換料/ID)
             </button>
         </div>
 
-        <!-- Controls -->
-        <div class="glass-card rounded-[2.5rem] p-8 mb-8">
+        <div class="glass-card rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-8 mb-8">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <!-- DST ID -->
                 <div>
@@ -107,8 +109,8 @@
         </div>
 
         <!-- QR Display -->
-        <div id="resultArea" class="glass-card rounded-[2.5rem] p-10 text-center animate-in zoom-in duration-500">
-            <div id="qrcode" class="flex justify-center mb-8"></div>
+        <div id="resultArea" class="glass-card rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-10 text-center animate-in zoom-in duration-500">
+            <div id="qrcode" class="flex justify-center mb-8 w-full overflow-hidden"></div>
             
             <button onclick="downloadQR()" class="w-full flex items-center justify-center gap-3 py-4 px-6 bg-white/10 hover:bg-white/20 text-white rounded-2xl font-bold transition-all active:scale-95">
                 <i data-lucide="download" class="w-5 h-5"></i>
@@ -140,15 +142,15 @@
             const dstId = document.getElementById('dstId');
 
             if (mode === 'WEIGHT') {
-                btnWeight.className = "flex-1 py-3 rounded-xl font-bold transition-all bg-amber-500 text-gray-900";
-                btnIng.className = "flex-1 py-3 rounded-xl font-bold transition-all text-white/40 hover:text-white";
+                btnWeight.className = "flex-1 py-3 rounded-xl font-bold transition-all bg-amber-500 text-gray-900 text-sm sm:text-base";
+                btnIng.className = "flex-1 py-3 rounded-xl font-bold transition-all text-white/40 hover:text-white text-sm sm:text-base";
                 dataLabel.innerHTML = '<i data-lucide="scale" class="w-4 h-4"></i> 出料重量 (g)';
                 unitLabel.innerText = 'g';
                 document.getElementById('dataVal').type = 'number';
                 document.getElementById('dataVal').value = "25.0";
             } else {
-                btnIng.className = "flex-1 py-3 rounded-xl font-bold transition-all bg-amber-500 text-gray-900";
-                btnWeight.className = "flex-1 py-3 rounded-xl font-bold transition-all text-white/40 hover:text-white";
+                btnIng.className = "flex-1 py-3 rounded-xl font-bold transition-all bg-amber-500 text-gray-900 text-sm sm:text-base";
+                btnWeight.className = "flex-1 py-3 rounded-xl font-bold transition-all text-white/40 hover:text-white text-sm sm:text-base";
                 dataLabel.innerHTML = '<i data-lucide="package" class="w-4 h-4"></i> 換料名稱 / ID';
                 unitLabel.innerText = 'ID';
                 document.getElementById('dataVal').type = 'text';
@@ -207,15 +209,67 @@
             });
         }
 
+        function dataURLtoBlob(dataurl) {
+            const arr = dataurl.split(',');
+            const mime = arr[0].match(/:(.*?);/)[1];
+            const bstr = atob(arr[1]);
+            let n = bstr.length;
+            const u8arr = new Uint8Array(n);
+            while (n--) {
+                u8arr[n] = bstr.charCodeAt(n);
+            }
+            return new Blob([u8arr], {type: mime});
+        }
+
         function downloadQR() {
+            const canvas = document.querySelector('#qrcode canvas');
             const img = document.querySelector('#qrcode img');
-            if (img) {
+            const dst = document.getElementById('dstId').value || '01';
+            const data = document.getElementById('dataVal').value || '0';
+            const filename = `SAUCE_${currentMode}_${data}_ID${dst}.png`;
+
+            if (canvas) {
+                try {
+                    canvas.toBlob(function(blob) {
+                        const url = URL.createObjectURL(blob);
+                        const link = document.createElement('a');
+                        link.download = filename;
+                        link.href = url;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        setTimeout(() => URL.revokeObjectURL(url), 100);
+                    }, 'image/png');
+                    return;
+                } catch (e) {
+                    console.error("Canvas toBlob failed, trying fallback", e);
+                }
+            }
+
+            if (img && img.src && img.src.startsWith('data:')) {
+                try {
+                    const blob = dataURLtoBlob(img.src);
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.download = filename;
+                    link.href = url;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    setTimeout(() => URL.revokeObjectURL(url), 100);
+                    return;
+                } catch (e) {
+                    console.error("DataURL to Blob failed", e);
+                }
+            }
+
+            if (img && img.src) {
                 const link = document.createElement('a');
-                const dst = document.getElementById('dstId').value || '01';
-                const data = document.getElementById('dataVal').value || '0';
-                link.download = `SAUCE_${currentMode}_${data}_ID${dst}.png`;
+                link.download = filename;
                 link.href = img.src;
+                document.body.appendChild(link);
                 link.click();
+                document.body.removeChild(link);
             }
         }
 
